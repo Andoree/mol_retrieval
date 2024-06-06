@@ -34,6 +34,8 @@ def test_model(model, tokenizer, original_test_df, augmented_sets_dict, max_leng
         print(augmentation_name)
         print('top1: ', sum(x[-2]))
         print('top5: ', sum(x[-1]))
+        print('acc1: ', sum(x[-2]) / len(x[-2]))
+        print('acc5: ', sum(x[-1]) / len(x[-1]))
         return x
 
 
