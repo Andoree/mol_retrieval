@@ -14,6 +14,7 @@ from molretrieval.utils.io import load_config_dict
 
 
 def test_model(model, tokenizer, original_test_df, augmented_sets_dict, max_length, smiles_col):
+    res_dict = {}
     try:
         orig_res = save_last_hidden_state_encoder(original_test_df, model, tokenizer, 'orig',
                                                   smiles_col=smiles_col, max_length=max_length)
@@ -36,7 +37,9 @@ def test_model(model, tokenizer, original_test_df, augmented_sets_dict, max_leng
         print('top5: ', sum(x[-1]))
         print('acc1: ', sum(x[-2]) / len(x[-2]))
         print('acc5: ', sum(x[-1]) / len(x[-1]))
-        return x
+        res_dict[augmentation_name] = x
+
+        return res_dict
 
 
 def main(args):
@@ -60,16 +63,22 @@ def main(args):
         augm_name2df[augm_name] = augm_test_df
 
         logging.info(f"Loaded augmented {augm_name} test - {augm_test_df.shape}")
-    retrieval_res = test_model(model, tokenizer, orig_test_df, augm_name2df, smiles_col="smiles", max_length=max_length)
-    dataset_size = orig_test_df.shape[0]
-    top_1_count = sum(retrieval_res[-2])
-    top_5_count = sum(retrieval_res[-1])
-    acc1 = top_1_count / dataset_size
-    acc5 = top_5_count / dataset_size
+    retrieval_res_dict = test_model(model, tokenizer, orig_test_df, augm_name2df, smiles_col="smiles",
+                                    max_length=max_length)
+    for augm_name, retrieval_res in retrieval_res_dict.items():
+        dataset_size = orig_test_df.shape[0]
+        top_1_count = sum(retrieval_res[-2])
+        top_5_count = sum(retrieval_res[-1])
+        acc1 = top_1_count / dataset_size
+        acc5 = top_5_count / dataset_size
 
-    output_res_path = os.path.join(output_dir, "retrieval_results.txt")
-    with open(output_res_path, 'w+', encoding="utf-8") as out_file:
-        out_file.write(f"Top 1 count: {top_1_count}\nTop 5 count: {top_5_count}\nAcc@1: {acc1}\nAcc@5: {acc5}\n")
+        output_res_path = os.path.join(output_dir, "retrieval_results.txt")
+        with open(output_res_path, 'a+', encoding="utf-8") as out_file:
+            out_file.write(f"Augm: {augm_name}\n\t"
+                           f"Top 1 count: {top_1_count}\n\t"
+                           f"Top 5 count: {top_5_count}\n\t"
+                           f"Acc@1: {acc1}\n\t"
+                           f"Acc@5: {acc5}\n")
 
 
 if __name__ == '__main__':
