@@ -7,7 +7,7 @@
 #SBATCH --gpus=1                   # Требуемое количество GPU
 #SBATCH --constraint=type_c|type_b|type_a
 
-
+set TOKENIZERS_PARALLELISM=false
 
 MODEL_VERBOSE=chemberta
 MODEL=/home/etutubalina/graph_entity_linking/huggingface_models/seyonec/ChemBERTa-zinc-base-v1
