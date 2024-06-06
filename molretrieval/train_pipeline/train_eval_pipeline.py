@@ -217,8 +217,8 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, required=False, default=16)
     parser.add_argument('--max_length', type=int, required=False, default=512)
     parser.add_argument('--num_epochs', type=int, required=False, default=50)
-    parser.add_argument('--warmup_ratio', type=float, required=False, default=0.1)
-    parser.add_argument('--warmup_steps', type=int, required=False)
+    parser.add_argument('--warmup_ratio', type=float, required=False, default=0.0)
+    parser.add_argument('--warmup_steps', type=int, required=False, default=0)
     parser.add_argument('--learning_rate', type=float, required=False, default=1e-5)
     parser.add_argument('--output_dir', type=str, required=True)
 
