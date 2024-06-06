@@ -55,11 +55,11 @@ def main(args):
     model = AutoModel.from_pretrained(base_model_name)
 
     input_test_path = os.path.join(input_data_dir, "test.csv")
-    orig_test_df = pd.read_csv(input_test_path)
+    orig_test_df = pd.read_csv(input_test_path).fillna("")
     augm_name2df = {}
     for augm_name in augmentation_names:
         input_augm_test_path = os.path.join(input_data_dir, f"{augm_name}.csv")
-        augm_test_df = pd.read_csv(input_augm_test_path)
+        augm_test_df = pd.read_csv(input_augm_test_path).fillna("")
         augm_name2df[augm_name] = augm_test_df
 
         logging.info(f"Loaded augmented {augm_name} test - {augm_test_df.shape}")
