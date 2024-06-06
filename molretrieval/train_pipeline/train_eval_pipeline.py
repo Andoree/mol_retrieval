@@ -200,6 +200,10 @@ def main(args):
         logging.info(f"Dataset: {input_data_dir}, augmentation: {additional_test_set_name}")
         for k, v in add_test_metrics.items():
             logging.info(f"\t{k} : {v}")
+        output_eval_results_path = os.path.join(output_dir, f"eval_results_{additional_test_set_name}.txt")
+        with open(output_eval_results_path, 'w+', encoding="utf-8") as out_file:
+            for k, v in add_test_metrics.items():
+                out_file.write(f"\t{k} : {v}\n")
         output_predictions_path = os.path.join(output_dir, f"prediction_{additional_test_set_name}.txt")
         with open(output_predictions_path, 'w+', encoding="utf-8") as out_file:
             for p in add_test_pred:
