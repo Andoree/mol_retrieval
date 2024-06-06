@@ -39,7 +39,7 @@ def test_model(model, tokenizer, original_test_df, augmented_sets_dict, max_leng
         print('acc5: ', sum(x[-1]) / len(x[-1]))
         res_dict[augmentation_name] = x
 
-        return res_dict
+    return res_dict
 
 
 def main(args):
