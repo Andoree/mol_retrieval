@@ -129,6 +129,8 @@ def main(args):
     num_classes = int(config_dict["num_classes"])
     classes_or_smiles_first = config_dict.get("classes_or_smiles_first")
     compute_metric_fn = TASK_NAME2COMPUTE_METRIC_FN[task_name]
+    greater_is_better = False if task_name == "regression" else True
+    logging.info(f"greater_is_better: {greater_is_better}")
 
     train_dataset = RegressionDataset(train_df, smiles_col=smiles_col, target_col=target_col, max_length=max_length,
                                       tokenizer=tokenizer, classes_or_smiles_first=classes_or_smiles_first,
@@ -142,6 +144,7 @@ def main(args):
     model = AutoModelForSequenceClassification.from_pretrained(base_model_name,
                                                                num_labels=num_classes,
                                                                problem_type=problem_type)
+
     train_args = TrainingArguments(
         output_finetuned_dir,
         evaluation_strategy="epoch",
@@ -153,6 +156,7 @@ def main(args):
         weight_decay=0.01,
         warmup_ratio=warmup_ratio,
         warmup_steps=warmup_steps,
+        greater_is_better=greater_is_better,
         load_best_model_at_end=True,
         metric_for_best_model=metric_name,
         logging_steps=0.01,
