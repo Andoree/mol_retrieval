@@ -1,0 +1,5 @@
+smiles_col : smiles
+target_col : y
+metric_name : rmse
+task : regression
+num_classes : 1

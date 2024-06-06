@@ -1,0 +1,6 @@
+smiles_col : smiles
+target_col : None
+metric_name : accuracy
+task : multi_label_classification
+num_classes : 12
+classes_or_smiles_first : classes
