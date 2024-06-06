@@ -209,6 +209,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_data_dir', type=str, required=True)
+    parser.add_argument('--input_config_path', type=str, required=True)
     parser.add_argument('--additional_test_sets', type=str, required=False, nargs='+')
     parser.add_argument('--base_model_name', type=str, required=True)
     parser.add_argument('--batch_size', type=int, required=False, default=16)
@@ -217,7 +218,6 @@ if __name__ == '__main__':
     parser.add_argument('--warmup_ratio', type=float, required=False, default=0.1)
     parser.add_argument('--warmup_steps', type=int, required=False)
     parser.add_argument('--learning_rate', type=float, required=False, default=1e-5)
-    parser.add_argument('--num_folds', type=int, required=False, default=10)
     parser.add_argument('--output_dir', type=str, required=True)
 
     args = parser.parse_args()
