@@ -23,9 +23,16 @@ do
   TASK_CONFIG_DIR=${BASE_CONFIGS_DIR}/${task_name}
   for dataset_name in ${TASK_DATA_DIR}/*;
   do
+  dataset_name=${dataset_name##*/}
+
   DATASET_CONFIG_PATH=${TASK_CONFIG_DIR}/config_${dataset_name}.txt
   DATASET_DIR=${TASK_DATA_DIR}/${dataset_name}
   OUTPUT_EVAL_DIR=${BASE_EVAL_DIR}/${task_name}_${dataset_name}/
+  echo "Processing ${dataset_name}"
+  echo ${DATASET_CONFIG_PATH}
+  echo ${DATASET_DIR}
+  echo ${OUTPUT_EVAL_DIR}
+  echo "---"
     python /home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/molretrieval/train_pipeline/train_eval_pipeline.py \
     --input_data_dir ${DATASET_DIR} \
     --input_config_path ${DATASET_CONFIG_PATH} \
