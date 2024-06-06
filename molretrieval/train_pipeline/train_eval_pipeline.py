@@ -207,6 +207,8 @@ def main(args):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S', )
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_data_dir', type=str, required=True)
     parser.add_argument('--input_config_path', type=str, required=True)
