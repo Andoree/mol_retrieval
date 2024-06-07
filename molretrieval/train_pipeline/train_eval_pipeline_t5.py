@@ -144,8 +144,9 @@ class T5Dataset(Dataset):
         return {
             'input_ids': src_input_ids.long(),
             'attention_mask': src_attention_mask.long(),
-            'decoder_input_ids': tgt_input_ids.long(),
-            'decoder_attention_mask': tgt_attention_mask.long()
+            "labels": tgt_input_ids.long()
+            # 'decoder_input_ids': tgt_input_ids.long(),
+            # 'decoder_attention_mask': tgt_attention_mask.long()
         }
 
 
