@@ -84,13 +84,18 @@ def compute_metrics_wrapper_binary(tokenizer, task):
         print("decoded_labels", decoded_labels)
         for true_label, pred_label in zip(decoded_labels, decoded_preds):
             if task == "single_label_classification":
-                true_labels_list.append(int(true_label.strip()))
-                pred_labels_list.append(int(pred_label.strip()))
+                true_labels_list.append(int(true_label[0].strip()))
+                try:
+                    pred_labels_list.append(int(pred_label[0].strip()))
+                except Exception as e:
+                    pred_labels_list.append(0)
             elif task == "regression":
-                true_label = float(true_label.strip())
+                true_label = float(true_label[0].strip())
                 pred_label = float("".join(pred_label).replace(' ', '').strip())
                 true_labels_list.append(true_label)
                 pred_labels_list.append(pred_label)
+        print("true_labels_list", true_labels_list[:10])
+        print("pred_labels_list", pred_labels_list[:10])
         result = {}
         if task == "regression":
             result["rmse"] = float(mean_squared_error(true_labels_list, pred_labels_list, squared=False))
