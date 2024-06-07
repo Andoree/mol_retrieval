@@ -210,7 +210,7 @@ def main(args):
         train_dataset=train_inputs,
         eval_dataset=val_inputs,
         tokenizer=tokenizer,
-        data_collator=data_collator,
+        # data_collator=data_collator,
         compute_metrics=compute_metrics_wrapper_binary(tokenizer, task_name),
     )
 
