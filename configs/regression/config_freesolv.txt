@@ -3,3 +3,4 @@ target_col : expt
 metric_name : rmse
 task : regression
 num_classes : 1
+prompt : Given molecule with SMILES <SMILES>, predict its hydration free energy in water.
