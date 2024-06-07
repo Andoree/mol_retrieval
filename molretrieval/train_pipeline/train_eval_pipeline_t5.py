@@ -142,10 +142,10 @@ class T5Dataset(Dataset):
         tgt_attention_mask = tgt_tokenized['attention_mask'].squeeze()
 
         return {
-            'src_input_ids': src_input_ids.long(),
-            'src_attention_mask': src_attention_mask.long(),
-            'tgt_input_ids': tgt_input_ids.long(),
-            'tgt_attention_mask': tgt_attention_mask.long()
+            'input_ids': src_input_ids.long(),
+            'attention_mask': src_attention_mask.long(),
+            'decoder_input_ids': tgt_input_ids.long(),
+            'decoder_attention_mask': tgt_attention_mask.long()
         }
 
 
