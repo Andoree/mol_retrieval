@@ -67,6 +67,8 @@ def compute_metrics_wrapper_binary(tokenizer, task):
 
     def compute_metrics(eval_preds):
         preds, labels = eval_preds
+        print("preds", preds)
+        print("labels", labels)
         if isinstance(preds, tuple):
             preds = preds[0]
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
@@ -78,6 +80,8 @@ def compute_metrics_wrapper_binary(tokenizer, task):
         pred_labels_list = []
 
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+        print("decoded_preds", decoded_preds)
+        print("decoded_labels", decoded_labels)
         for true_label, pred_label in zip(decoded_labels, decoded_preds):
             if task == "single_label_classification":
                 true_labels_list.append(int(true_label.strip()))
