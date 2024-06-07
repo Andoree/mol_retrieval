@@ -102,6 +102,53 @@ def compute_metrics_wrapper_binary(tokenizer, task):
     return compute_metrics
 
 
+class T5Dataset(Dataset):
+    def __init__(self, tokenizer, prompts, labels, max_length):
+        super(T5Dataset, self).__init__()
+        self.tokenizer = tokenizer
+        prompts = [str(x) for x in prompts]
+        labels = [str(x) for x in labels]
+        self.prompts = prompts
+        self.labels = labels
+        self.src_max_length = max_length
+        self.tgt_max_length = 32
+
+    def __len__(self):
+        return len(self.prompts)
+
+    def __getitem__(self, index):
+        src_tokenized = self.tokenizer.encode_plus(
+            self.prompts[index],
+            max_length=self.src_max_length,
+            pad_to_max_length=True,
+            truncation=True,
+            return_attention_mask=True,
+            return_token_type_ids=False,
+            return_tensors='pt'
+        )
+        src_input_ids = src_tokenized['input_ids'].squeeze()
+        src_attention_mask = src_tokenized['attention_mask'].squeeze()
+
+        tgt_tokenized = self.tokenizer.encode_plus(
+            self.labels[index],
+            max_length=self.tgt_max_length,
+            pad_to_max_length=True,
+            truncation=True,
+            return_attention_mask=True,
+            return_token_type_ids=False,
+            return_tensors='pt'
+        )
+        tgt_input_ids = tgt_tokenized['input_ids'].squeeze()
+        tgt_attention_mask = tgt_tokenized['attention_mask'].squeeze()
+
+        return {
+            'src_input_ids': src_input_ids.long(),
+            'src_attention_mask': src_attention_mask.long(),
+            'tgt_input_ids': tgt_input_ids.long(),
+            'tgt_attention_mask': tgt_attention_mask.long()
+        }
+
+
 def create_tokenized_samples(tokenizer, prompts, labels, max_length):
     prompts = [str(x) for x in prompts]
     labels = [str(x) for x in labels]
@@ -163,13 +210,18 @@ def main(args):
 
     # model = T5ForConditionalGeneration.from_pretrained(base_model_name)
     model = AutoModelForSeq2SeqLM.from_pretrained(base_model_name)
-    train_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=train_df["prompt"].values,
-                                            labels=train_df[target_col].values, max_length=max_length)
-    val_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=val_df["prompt"].values,
-                                          labels=val_df[target_col].values, max_length=max_length)
-    test_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=test_df["prompt"].values,
-                                           labels=test_df[target_col].values, max_length=max_length)
-    data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=base_model_name)
+    train_inputs = T5Dataset(tokenizer=tokenizer, prompts=train_df["prompt"].values,
+                             labels=train_df[target_col].values, max_length=max_length)
+    val_inputs = T5Dataset(tokenizer=tokenizer, prompts=val_df["prompt"].values,
+                           labels=val_df[target_col].values, max_length=max_length)
+    test_inputs = T5Dataset(tokenizer=tokenizer, prompts=test_df["prompt"].values,
+                            labels=test_df[target_col].values, max_length=max_length)
+    # train_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=train_df["prompt"].values,
+    #                                         labels=train_df[target_col].values, max_length=max_length)
+    # val_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=val_df["prompt"].values,
+    #                                       labels=val_df[target_col].values, max_length=max_length)
+    # test_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=test_df["prompt"].values,
+    #                                        labels=test_df[target_col].values, max_length=max_length)
 
     # train_args = TrainingArguments(
     #     output_finetuned_dir,
@@ -234,10 +286,10 @@ def main(args):
     for additional_test_set_name in additional_test_sets:
         input_additional_test_path = os.path.join(input_data_dir, f"{additional_test_set_name}.csv")
         additional_test_df = pd.read_csv(input_additional_test_path).fillna(0)
-        additional_test_inputs = create_tokenized_samples(tokenizer=tokenizer,
-                                                          prompts=additional_test_df["prompt"].values,
-                                                          labels=additional_test_df[target_col].values,
-                                                          max_length=max_length)
+        additional_test_inputs = T5Dataset(tokenizer=tokenizer,
+                                           prompts=additional_test_df["prompt"].values,
+                                           labels=additional_test_df[target_col].values,
+                                           max_length=max_length)
         add_test_metrics = trainer.evaluate(additional_test_inputs)
 
         additional_test_prediction = trainer.predict(additional_test_inputs)
