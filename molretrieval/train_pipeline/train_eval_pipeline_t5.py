@@ -7,7 +7,7 @@ import torch
 from sklearn.metrics import accuracy_score, mean_absolute_error, mean_squared_error
 from torch.utils.data import Dataset
 from transformers import AutoModelForSequenceClassification, TrainingArguments, Trainer, T5ForConditionalGeneration, \
-    DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
+    DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer, AutoModelForSeq2SeqLM
 from transformers import AutoTokenizer
 
 from molretrieval.utils.io import load_config_dict
@@ -161,7 +161,8 @@ def main(args):
     val_df["prompt"] = val_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
     test_df["prompt"] = test_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
 
-    model = T5ForConditionalGeneration.from_pretrained(base_model_name)
+    # model = T5ForConditionalGeneration.from_pretrained(base_model_name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(base_model_name)
     train_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=train_df["prompt"].values,
                                             labels=train_df[target_col].values, max_length=max_length)
     val_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=val_df["prompt"].values,
