@@ -301,6 +301,13 @@ def main(args):
     for additional_test_set_name in additional_test_sets:
         input_additional_test_path = os.path.join(input_data_dir, f"{additional_test_set_name}.csv")
         additional_test_df = pd.read_csv(input_additional_test_path).fillna(0)
+        if target_col is not None and target_col.strip() != "None":
+            additional_test_df[target_col] = additional_test_df[target_col].fillna(0)
+
+        additional_test_df[target_col] = additional_test_df[target_col].astype(str)
+
+        additional_test_df["prompt"] = additional_test_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>",
+                                                                                                      sm))
         additional_test_inputs = T5Dataset(tokenizer=tokenizer,
                                            prompts=additional_test_df["prompt"].values,
                                            labels=additional_test_df[target_col].values,

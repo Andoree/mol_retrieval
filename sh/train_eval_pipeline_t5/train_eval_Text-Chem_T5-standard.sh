@@ -42,7 +42,7 @@ do
     --max_length 256 \
     --num_epochs 50 \
     --warmup_ratio 0.1 \
-    --learning_rate 1e-5 \
+    --learning_rate 6e-4 \
     --output_dir ${OUTPUT_EVAL_DIR}
 
   done
