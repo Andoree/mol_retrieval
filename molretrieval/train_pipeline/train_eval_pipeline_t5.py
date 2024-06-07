@@ -124,7 +124,7 @@ class T5Dataset(Dataset):
         src_tokenized = self.tokenizer.encode_plus(
             self.prompts[index],
             max_length=self.src_max_length,
-            pad_to_max_length=True,
+            padding='max_length',
             truncation=True,
             return_attention_mask=True,
             return_token_type_ids=False,
@@ -136,7 +136,7 @@ class T5Dataset(Dataset):
         tgt_tokenized = self.tokenizer.encode_plus(
             self.labels[index],
             max_length=self.tgt_max_length,
-            pad_to_max_length=True,
+            padding='max_length',
             truncation=True,
             return_attention_mask=True,
             return_token_type_ids=False,
