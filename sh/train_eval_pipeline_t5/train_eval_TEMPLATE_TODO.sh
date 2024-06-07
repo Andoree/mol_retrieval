@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=chem_enc_finetune          # Название задачи
+#SBATCH --job-name=chem_t5     # Название задачи
 #SBATCH --error=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_TEMPLATE_TODO.err        # Файл для вывода ошибок
 #SBATCH --output=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_TEMPLATE_TODO.txt       # Файл для вывода результатов
 #SBATCH --time=23:45:59                      # Максимальное время выполнения
@@ -33,7 +33,7 @@ do
   echo ${DATASET_DIR}
   echo ${OUTPUT_EVAL_DIR}
   echo "---"
-    python /home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/molretrieval/train_pipeline/train_eval_pipeline.py \
+    python /home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/molretrieval/train_pipeline/train_eval_pipeline_t5.py \
     --input_data_dir ${DATASET_DIR} \
     --input_config_path ${DATASET_CONFIG_PATH} \
     --additional_test_sets "test_cycle_renumering" "test_explicit_hs" "test_kekulize_smiles" "test_rdkit_canonical" \
