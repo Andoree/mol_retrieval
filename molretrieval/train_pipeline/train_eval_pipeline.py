@@ -140,6 +140,17 @@ def main(args):
         val_df[target_col] = val_df[target_col].fillna(0)
         test_df[target_col] = test_df[target_col].fillna(0)
 
+    if problem_type == "multi_label_classification":
+        if classes_or_smiles_first == "classes":
+            train_df.iloc[:, :num_classes].fillna(0, inplace=True)
+            val_df.iloc[:, :num_classes].fillna(0, inplace=True)
+            test_df.iloc[:, :num_classes].fillna(0, inplace=True)
+        elif classes_or_smiles_first == "smiles":
+            train_df.iloc[:, 1:].fillna(0, inplace=True)
+            val_df.iloc[:, 1:].fillna(0, inplace=True)
+            test_df.iloc[:, 1:].fillna(0, inplace=True)
+
+
     train_dataset = RegressionDataset(train_df, smiles_col=smiles_col, target_col=target_col, max_length=max_length,
                                       tokenizer=tokenizer, classes_or_smiles_first=classes_or_smiles_first,
                                       num_labels=num_classes, task_name=task_name)
