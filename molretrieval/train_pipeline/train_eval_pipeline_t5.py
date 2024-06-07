@@ -59,7 +59,7 @@ def postprocess_text(preds, labels):
 
 def compute_metrics_wrapper_binary(tokenizer, task):
     id_0 = tokenizer.tokenize("0", add_special_tokens=False)[0]
-    id_1 = tokenizer.tokenize("1", add_special_tokens=False)[1]
+    id_1 = tokenizer.tokenize("1", add_special_tokens=False)[0]
     assert len(id_0) == 1
     assert len(id_1) == 1
     assert isinstance(id_0, int)
