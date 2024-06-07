@@ -3,3 +3,4 @@ target_col : Class
 metric_name : accuracy
 task : single_label_classification
 num_classes : 2
+prompt : Please evaluate the ability of <SMILES> to inhibit human beta-secretase?

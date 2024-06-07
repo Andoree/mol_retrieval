@@ -6,7 +6,8 @@ import pandas as pd
 import torch
 from sklearn.metrics import accuracy_score, mean_absolute_error, mean_squared_error
 from torch.utils.data import Dataset
-from transformers import AutoModelForSequenceClassification, TrainingArguments, Trainer
+from transformers import AutoModelForSequenceClassification, TrainingArguments, Trainer, T5ForConditionalGeneration, \
+    DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
 from transformers import AutoTokenizer
 
 from molretrieval.utils.io import load_config_dict
@@ -50,49 +51,61 @@ TASK_NAME2COMPUTE_METRIC_FN = {
 }
 
 
-class RegressionDataset(Dataset):
+def postprocess_text(preds, labels):
+    preds = [pred.strip() for pred in preds]
+    labels = [[label.strip()] for label in labels]
+    return preds, labels
 
-    def __init__(self, df, smiles_col: str, target_col: str, max_length: int, tokenizer,
-                 task_name: str, classes_or_smiles_first: str, num_labels: int):
-        super(RegressionDataset).__init__()
 
-        assert task_name in ("regression", "single_label_classification", "multi_label_classification")
-        assert classes_or_smiles_first is None or classes_or_smiles_first in ("classes", "smiles")
+def compute_metrics_wrapper_binary(tokenizer, task):
+    id_0 = tokenizer.tokenize("0", add_special_tokens=False)[0]
+    id_1 = tokenizer.tokenize("1", add_special_tokens=False)[1]
+    assert len(id_0) == 1
+    assert len(id_1) == 1
+    assert isinstance(id_0, int)
+    assert isinstance(id_1, int)
 
-        self.smiles_list = df[smiles_col]
+    def compute_metrics(eval_preds):
+        preds, labels = eval_preds
+        if isinstance(preds, tuple):
+            preds = preds[0]
+        decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
 
-        self.max_length = max_length
-        self.num_labels = num_labels
-        self.tokenizer = tokenizer
-        self.task_name = task_name
-        self.classes_or_smiles_first = classes_or_smiles_first
-        if task_name == "regression":
-            self.target_values = torch.tensor(df[target_col], dtype=torch.float32)
-        elif task_name == "single_label_classification":
-            self.target_values = torch.zeros(df.shape[0], 2, dtype=torch.float32)
-            for row_id, class_id in enumerate(df[target_col].values):
-                self.target_values[row_id, class_id] = 1.
-        else:
-            if classes_or_smiles_first == "classes":
-                self.target_values = torch.tensor(df.iloc[:, :self.num_labels].values, dtype=torch.float32)
-            elif classes_or_smiles_first == "smiles":
-                self.target_values = torch.tensor(df.iloc[:, 1:].values, dtype=torch.float32)
-            else:
-                raise RuntimeError(f"Unsupported classes_or_smiles_first: {classes_or_smiles_first}")
-        self.tokenized_smiles = [tokenizer.encode_plus(x,
-                                                       max_length=self.max_length,
-                                                       truncation=True,
-                                                       return_tensors="pt", ) for x in self.smiles_list]
-        assert len(self.smiles_list) == len(self.target_values)
+        labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
 
-    def __len__(self):
-        return len(self.smiles_list)
+        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+        true_labels_list = []
+        pred_labels_list = []
 
-    def __getitem__(self, idx):
-        return {
-            "input_ids": self.tokenized_smiles[idx]["input_ids"][0],
-            "attention_mask": self.tokenized_smiles[idx]["attention_mask"][0],
-            "labels": self.target_values[idx]}
+        decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+        for true_label, pred_label in zip(decoded_labels, decoded_preds):
+            if task == "single_label_classification":
+                true_labels_list.append(int(true_label.strip()))
+                pred_labels_list.append(int(pred_label.strip()))
+            elif task == "regression":
+                true_label = float(true_label.strip())
+                pred_label = float("".join(pred_label).replace(' ', '').strip())
+                true_labels_list.append(true_label)
+                pred_labels_list.append(pred_label)
+        result = {}
+        if task == "regression":
+            result["rmse"] = float(mean_squared_error(true_labels_list, pred_labels_list, squared=False))
+            result["mae"] = float(mean_absolute_error(true_labels_list, pred_labels_list))
+        elif task == "single_label_classification":
+            result["accuracy"] = float(accuracy_score(true_labels_list, pred_labels_list))
+
+        prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
+        result["gen_len"] = np.mean(prediction_lens)
+
+        return result
+
+    return compute_metrics
+
+
+def create_tokenized_samples(tokenizer, prompts, labels, max_length):
+    model_inputs = tokenizer(prompts, text_target=labels, max_length=max_length, truncation=True)
+    return model_inputs
+
 
 def main(args):
     input_data_dir = args.input_data_dir
@@ -125,13 +138,17 @@ def main(args):
     metric_name = config_dict["metric_name"]
     task_name = config_dict["task"]
     problem_type = task_name
-    problem_type = problem_type if problem_type != "single_label_classification" else None
-    num_classes = int(config_dict["num_classes"])
-    classes_or_smiles_first = config_dict.get("classes_or_smiles_first")
-    compute_metric_fn = TASK_NAME2COMPUTE_METRIC_FN[task_name]
+    # problem_type = problem_type if problem_type != "single_label_classification" else None
+    # num_classes = int(config_dict["num_classes"])
+    # classes_or_smiles_first = config_dict.get("classes_or_smiles_first")
+    # compute_metric_fn = TASK_NAME2COMPUTE_METRIC_FN[task_name]
     greater_is_better = False if task_name == "regression" else True
     logging.info(f"greater_is_better: {greater_is_better}")
     prompt = config_dict["prompt"]
+    if target_col is not None and target_col.strip() != "None":
+        train_df[target_col] = train_df[target_col].fillna(0)
+        val_df[target_col] = val_df[target_col].fillna(0)
+        test_df[target_col] = test_df[target_col].fillna(0)
 
     train_df[target_col] = train_df[target_col].astype(str)
     val_df[target_col] = val_df[target_col].astype(str)
@@ -140,48 +157,56 @@ def main(args):
     val_df["prompt"] = val_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
     test_df["prompt"] = test_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
 
-    # TODO: Остановился здесь
+    model = T5ForConditionalGeneration.from_pretrained(base_model_name)
+    train_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=train_df["prompt"].values,
+                                            labels=train_df[target_col].values, max_length=max_length)
+    val_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=val_df["prompt"].values,
+                                          labels=val_df[target_col].values, max_length=max_length)
+    test_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=test_df["prompt"].values,
+                                           labels=test_df[target_col].values, max_length=max_length)
+    data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=base_model_name)
 
-    train_dataset = RegressionDataset(train_df, smiles_col=smiles_col, target_col=target_col, max_length=max_length,
-                                      tokenizer=tokenizer, classes_or_smiles_first=classes_or_smiles_first,
-                                      num_labels=num_classes, task_name=task_name)
-    valid_dataset = RegressionDataset(val_df, smiles_col=smiles_col, target_col=target_col, max_length=max_length,
-                                      tokenizer=tokenizer, classes_or_smiles_first=classes_or_smiles_first,
-                                      num_labels=num_classes, task_name=task_name)
-    test_dataset = RegressionDataset(test_df, smiles_col=smiles_col, target_col=target_col, max_length=max_length,
-                                     tokenizer=tokenizer, classes_or_smiles_first=classes_or_smiles_first,
-                                     num_labels=num_classes, task_name=task_name)
-    model = AutoModelForSequenceClassification.from_pretrained(base_model_name,
-                                                               num_labels=num_classes,
-                                                               problem_type=problem_type)
-
-    train_args = TrainingArguments(
-        output_finetuned_dir,
+    # train_args = TrainingArguments(
+    #     output_finetuned_dir,
+    #     evaluation_strategy="epoch",
+    #     save_strategy="epoch",
+    #     learning_rate=learning_rate,
+    #     per_device_train_batch_size=batch_size,
+    #     per_device_eval_batch_size=batch_size,
+    #     num_train_epochs=num_epochs,
+    #     weight_decay=0.01,
+    #     warmup_ratio=warmup_ratio,
+    #     warmup_steps=warmup_steps,
+    #     greater_is_better=greater_is_better,
+    #     load_best_model_at_end=True,
+    #     metric_for_best_model=metric_name,
+    #     logging_steps=0.01,
+    #     save_total_limit=2,
+    #     seed=42,
+    #     push_to_hub=False,
+    # )
+    training_args = Seq2SeqTrainingArguments(
+        output_dir=output_finetuned_dir,
         evaluation_strategy="epoch",
-        save_strategy="epoch",
         learning_rate=learning_rate,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
-        num_train_epochs=num_epochs,
         weight_decay=0.01,
-        warmup_ratio=warmup_ratio,
-        warmup_steps=warmup_steps,
-        greater_is_better=greater_is_better,
-        load_best_model_at_end=True,
-        metric_for_best_model=metric_name,
-        logging_steps=0.01,
         save_total_limit=2,
-        seed=42,
+        num_train_epochs=num_epochs,
+        predict_with_generate=True,
+        fp16=False,
         push_to_hub=False,
+        seed=42
     )
-
-    trainer = Trainer(
-        model,
-        train_args,
-        train_dataset=train_dataset,
-        eval_dataset=valid_dataset,
+    trainer = Seq2SeqTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_inputs,
+        eval_dataset=val_inputs,
         tokenizer=tokenizer,
-        compute_metrics=compute_metric_fn
+        data_collator=data_collator,
+        compute_metrics=compute_metrics_wrapper_binary(tokenizer, task_name),
     )
 
     logging.info("Training...")
@@ -191,11 +216,11 @@ def main(args):
     logging.info(f"Dev evaluation:")
     for k, v in dev_eval_dict.items():
         logging.info(f"{k} : {v}")
-    test_eval_dict = trainer.evaluate(test_dataset)
+    test_eval_dict = trainer.evaluate(test_inputs)
     for k, v in test_eval_dict.items():
         logging.info(f"{k} : {v}")
     logging.info("Finished Evaluation....")
-    test_prediction = trainer.predict(test_dataset)
+    test_prediction = trainer.predict(test_inputs)
     test_pred, test_labels, test_metrics = test_prediction
     logging.info(f"Dataset: {input_data_dir}, original test set")
     for k, v in test_metrics.items():
@@ -204,13 +229,14 @@ def main(args):
     for additional_test_set_name in additional_test_sets:
         input_additional_test_path = os.path.join(input_data_dir, f"{additional_test_set_name}.csv")
         additional_test_df = pd.read_csv(input_additional_test_path).fillna(0)
-        additional_test_dataset = RegressionDataset(additional_test_df, smiles_col=smiles_col, target_col=target_col,
-                                                    max_length=max_length, tokenizer=tokenizer,
-                                                    classes_or_smiles_first=classes_or_smiles_first,
-                                                    num_labels=num_classes, task_name=task_name)
-        additional_test_prediction = trainer.predict(additional_test_dataset)
+        additional_test_inputs = create_tokenized_samples(tokenizer=tokenizer,
+                                                          prompts=additional_test_df["prompt"].values,
+                                                          labels=additional_test_df[target_col].values,
+                                                          max_length=max_length)
+        add_test_metrics = trainer.evaluate(additional_test_inputs)
 
-        add_test_pred, add_test_labels, add_test_metrics = additional_test_prediction
+        additional_test_prediction = trainer.predict(additional_test_inputs)
+
         logging.info(f"Dataset: {input_data_dir}, augmentation: {additional_test_set_name}")
         for k, v in add_test_metrics.items():
             logging.info(f"\t{k} : {v}")
@@ -218,9 +244,10 @@ def main(args):
         with open(output_eval_results_path, 'w+', encoding="utf-8") as out_file:
             for k, v in add_test_metrics.items():
                 out_file.write(f"\t{k} : {v}\n")
+
         output_predictions_path = os.path.join(output_dir, f"prediction_{additional_test_set_name}.txt")
         with open(output_predictions_path, 'w+', encoding="utf-8") as out_file:
-            for p in add_test_pred:
+            for p in additional_test_prediction:
                 out_file.write(f"{str(p)}\n")
 
 

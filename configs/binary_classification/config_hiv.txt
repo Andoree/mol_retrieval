@@ -3,3 +3,4 @@ target_col : HIV_active
 metric_name : accuracy
 task : single_label_classification
 num_classes : 2
+prompt : Is <SMILES> an HIV inhibitor?
