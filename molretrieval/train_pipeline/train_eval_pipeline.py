@@ -79,7 +79,7 @@ class RegressionDataset(Dataset):
                 self.target_values = torch.tensor(df.iloc[:, 1:].values, dtype=torch.float32)
             else:
                 raise RuntimeError(f"Unsupported classes_or_smiles_first: {classes_or_smiles_first}")
-        self.tokenized_smiles = [tokenizer.encode_plus(x,
+        self.tokenized_smiles = [tokenizer.encode_plus(str(x),
                                                        max_length=self.max_length,
                                                        truncation=True,
                                                        return_tensors="pt", ) for x in self.smiles_list]
@@ -114,9 +114,9 @@ def main(args):
     input_train_path = os.path.join(input_data_dir, "train.csv")
     input_valid_path = os.path.join(input_data_dir, "valid.csv")
     input_test_path = os.path.join(input_data_dir, "test.csv")
-    train_df = pd.read_csv(input_train_path).fillna(0)
-    val_df = pd.read_csv(input_valid_path).fillna(0)
-    test_df = pd.read_csv(input_test_path).fillna(0)
+    train_df = pd.read_csv(input_train_path)#.fillna(0)
+    val_df = pd.read_csv(input_valid_path)#.fillna(0)
+    test_df = pd.read_csv(input_test_path)#.fillna(0)
 
     logging.info(f"Loaded data: Train - {train_df.shape}, Val - {val_df.shape}, Test - {test_df.shape}")
     config_dict = load_config_dict(config_path=input_config_path)
@@ -131,6 +131,14 @@ def main(args):
     compute_metric_fn = TASK_NAME2COMPUTE_METRIC_FN[task_name]
     greater_is_better = False if task_name == "regression" else True
     logging.info(f"greater_is_better: {greater_is_better}")
+    train_df[smiles_col] = train_df[smiles_col].fillna("")
+    val_df[smiles_col] = val_df[smiles_col].fillna("")
+    test_df[smiles_col] = test_df[smiles_col].fillna("")
+
+    train_df[target_col] = train_df[target_col].fillna(0)
+    val_df[target_col] = val_df[target_col].fillna(0)
+    test_df[target_col] = test_df[target_col].fillna(0)
+
 
     train_dataset = RegressionDataset(train_df, smiles_col=smiles_col, target_col=target_col, max_length=max_length,
                                       tokenizer=tokenizer, classes_or_smiles_first=classes_or_smiles_first,
