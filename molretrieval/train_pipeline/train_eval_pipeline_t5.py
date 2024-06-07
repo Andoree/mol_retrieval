@@ -103,6 +103,10 @@ def compute_metrics_wrapper_binary(tokenizer, task):
 
 
 def create_tokenized_samples(tokenizer, prompts, labels, max_length):
+    prompts = [str(x) for x in prompts]
+    labels = [str(x) for x in labels]
+    print("prompts", prompts[:5])
+    print("labels", labels[:5])
     model_inputs = tokenizer(prompts, text_target=labels, max_length=max_length, truncation=True)
     return model_inputs
 
