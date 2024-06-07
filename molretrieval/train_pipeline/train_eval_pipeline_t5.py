@@ -217,7 +217,7 @@ def main(args):
     train_df["prompt"] = train_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
     val_df["prompt"] = val_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
     test_df["prompt"] = test_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
-
+    print("prompts", train_df["prompt"].values[:10])
     # model = T5ForConditionalGeneration.from_pretrained(base_model_name)
     model = T5ForConditionalGeneration.from_pretrained(base_model_name)
     train_inputs = T5Dataset(tokenizer=tokenizer, prompts=train_df["prompt"].values,
