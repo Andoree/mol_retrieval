@@ -209,7 +209,7 @@ def main(args):
     test_df["prompt"] = test_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
 
     # model = T5ForConditionalGeneration.from_pretrained(base_model_name)
-    model = AutoModelForSeq2SeqLM.from_pretrained(base_model_name)
+    model = T5ForConditionalGeneration.from_pretrained(base_model_name)
     train_inputs = T5Dataset(tokenizer=tokenizer, prompts=train_df["prompt"].values,
                              labels=train_df[target_col].values, max_length=max_length)
     val_inputs = T5Dataset(tokenizer=tokenizer, prompts=val_df["prompt"].values,
