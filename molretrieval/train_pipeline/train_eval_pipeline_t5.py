@@ -67,8 +67,8 @@ def compute_metrics_wrapper_binary(tokenizer, task):
 
     def compute_metrics(eval_preds):
         preds, labels = eval_preds
-        print("preds", preds)
-        print("labels", labels)
+        print("preds", preds[:10])
+        print("labels", labels[:10])
         if isinstance(preds, tuple):
             preds = preds[0]
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
@@ -80,8 +80,8 @@ def compute_metrics_wrapper_binary(tokenizer, task):
         pred_labels_list = []
 
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
-        print("decoded_preds", decoded_preds)
-        print("decoded_labels", decoded_labels)
+        print("decoded_preds", decoded_preds[:10])
+        print("decoded_labels", decoded_labels[:10])
         for true_label, pred_label in zip(decoded_labels, decoded_preds):
             if task == "single_label_classification":
                 true_labels_list.append(int(true_label[0].strip()))
@@ -91,7 +91,10 @@ def compute_metrics_wrapper_binary(tokenizer, task):
                     pred_labels_list.append(0)
             elif task == "regression":
                 true_label = float(true_label[0].strip())
-                pred_label = float("".join(pred_label).replace(' ', '').strip())
+                try:
+                    pred_label = float("".join(pred_label).replace(' ', '').strip())
+                except Exception as e:
+                    pred_label = 0.
                 true_labels_list.append(true_label)
                 pred_labels_list.append(pred_label)
         print("true_labels_list", true_labels_list[:10])
@@ -262,6 +265,8 @@ def main(args):
         save_total_limit=2,
         num_train_epochs=num_epochs,
         predict_with_generate=True,
+        metric_for_best_model=metric_name,
+        greater_is_better=greater_is_better,
         fp16=False,
         push_to_hub=False,
         seed=42
