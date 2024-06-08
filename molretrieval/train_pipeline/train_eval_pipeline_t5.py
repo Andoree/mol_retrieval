@@ -230,6 +230,9 @@ def main(args):
             class_names = column_names[:num_classes]
         elif classes_or_smiles_first == "smiles":
             class_names = column_names[1:]
+            print("len(class_names)", len(class_names))
+            print("num_classes", num_classes)
+            print("class_names", class_names)
             assert len(class_names) == num_classes
         train_df["y_verbose"] = train_df.apply(lambda row: create_verbose_multilabel(row, class_names), axis=1)
         val_df["y_verbose"] = val_df.apply(lambda row: create_verbose_multilabel(row, class_names), axis=1)
