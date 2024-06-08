@@ -40,7 +40,7 @@ do
     --base_model_name ${MODEL} \
     --batch_size 32 \
     --max_length 256 \
-    --num_epochs 50 \
+    --num_epochs 25 \
     --warmup_ratio 0.1 \
     --learning_rate 6e-4 \
     --output_dir ${OUTPUT_EVAL_DIR}
