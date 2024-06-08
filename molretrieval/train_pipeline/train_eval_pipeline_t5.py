@@ -29,8 +29,8 @@ def compute_metrics_wrapper_binary(tokenizer, task, class_names):
 
     def compute_metrics(eval_preds):
         preds, labels = eval_preds
-        print("preds", preds[:3])
-        print("labels", labels[:3])
+        print("preds", preds[:5])
+        print("labels", labels[:5])
         if isinstance(preds, tuple):
             preds = preds[0]
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
@@ -46,8 +46,8 @@ def compute_metrics_wrapper_binary(tokenizer, task, class_names):
             num_classes = len(class_names)
 
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
-        print("decoded_preds", decoded_preds[:3])
-        print("decoded_labels", decoded_labels[:3])
+        print("decoded_preds", decoded_preds[:5])
+        print("decoded_labels", decoded_labels[:5])
         for true_label, pred_label in zip(decoded_labels, decoded_preds):
             if task == "single_label_classification":
                 true_labels_list.append(int(true_label[0].strip()))
@@ -69,8 +69,8 @@ def compute_metrics_wrapper_binary(tokenizer, task, class_names):
                 # assert len(pred_label) == 1
                 true_positive_class_names = set([s.lower().strip() for s in true_label[0].split(',')])
                 pred_positive_class_names = set([s.lower().strip() for s in pred_label.split(',')])
-                print("true_positive_class_names", tuple(true_positive_class_names)[:3])
-                print("predicted_positive_class_names", tuple(pred_positive_class_names)[:3])
+                # print("true_positive_class_names", tuple(true_positive_class_names)[:3])
+                # print("predicted_positive_class_names", tuple(pred_positive_class_names)[:3])
                 true_binary_labels = [0, ] * num_classes
                 pred_binary_labels = [0, ] * num_classes
                 for cn in true_positive_class_names:
@@ -85,8 +85,8 @@ def compute_metrics_wrapper_binary(tokenizer, task, class_names):
                 pred_labels_list.extend(pred_binary_labels)
             else:
                 ValueError(f"Unsupported task name: {task}")
-        print("true_labels_list", true_labels_list[:3])
-        print("pred_labels_list", pred_labels_list[:3])
+        print("true_labels_list", true_labels_list[:15])
+        print("pred_labels_list", pred_labels_list[:15])
         result = {}
         if task == "regression":
             result["rmse"] = float(mean_squared_error(true_labels_list, pred_labels_list, squared=False))
