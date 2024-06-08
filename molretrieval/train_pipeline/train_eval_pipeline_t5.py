@@ -24,7 +24,8 @@ def postprocess_text(preds, labels):
 
 
 def compute_metrics_wrapper_binary(tokenizer, task, class_names):
-    class_names = [x.lower().strip() for x in class_names]
+    if class_names is not None:
+        class_names = [x.lower().strip() for x in class_names]
 
     def compute_metrics(eval_preds):
         preds, labels = eval_preds
