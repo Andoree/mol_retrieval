@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=chem_t5          # Название задачи
-#SBATCH --error=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_Text-Chem_T5-standard_binary_classification.err        # Файл для вывода ошибок
-#SBATCH --output=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_Text-Chem_T5-standard_binary_classification.txt       # Файл для вывода результатов
+#SBATCH --job-name=chem_t5     # Название задачи
+#SBATCH --error=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_MolT5-base_binary_classification.err        # Файл для вывода ошибок
+#SBATCH --output=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_MolT5-base_binary_classification.txt       # Файл для вывода результатов
 #SBATCH --time=23:45:59                      # Максимальное время выполнения
 #SBATCH --cpus-per-task=2                   # Количество CPU на одну задачу
 #SBATCH --gpus=1                   # Требуемое количество GPU
@@ -9,15 +9,26 @@
 
 set TOKENIZERS_PARALLELISM=false
 
-MODEL_VERBOSE=Text-Chem_T5-standard
-MODEL=/home/etutubalina/graph_entity_linking/huggingface_models/GT4SD/multitask-text-and-chemistry-t5-base-standard
+MODEL_VERBOSE=MolT5-base
+MODEL=/home/etutubalina/graph_entity_linking/huggingface_models/laituan245/molt5-base-smiles2caption
+
 
 BASE_CONFIGS_DIR=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/configs
 BASE_DATA_DIR=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/datasets/moleculenet-benchmark
 TASK_NAMES=("binary_classification")
 BASE_EVAL_DIR=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/finetune_eval_results/${MODEL_VERBOSE}
+do
+  TASK_DATA_DIR=${BASE_DATA_DIR}/${task_name}
+  TASK_CONFIG_DIR=${BASE_CONFIGS_DIR}/${task_name}
+  for dataset_name in ${TASK_DATA_DIR}/*;
+  do
 
 for task_name in ${TASK_NAMES[@]};
+do
+  TASK_DATA_DIR=${BASE_DATA_DIR}/${task_name}
+  TASK_CONFIG_DIR=${BASE_CONFIGS_DIR}/${task_name}
+  for dataset_name in ${TASK_DATA_DIR}/*;
+  do
 do
   TASK_DATA_DIR=${BASE_DATA_DIR}/${task_name}
   TASK_CONFIG_DIR=${BASE_CONFIGS_DIR}/${task_name}
@@ -42,7 +53,7 @@ do
     --max_length 256 \
     --num_epochs 25 \
     --warmup_ratio 0.1 \
-    --learning_rate 6e-4 \
+    --learning_rate 1e-3 \
     --output_dir ${OUTPUT_EVAL_DIR}
 
   done

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=chem_t5          # Название задачи
-#SBATCH --error=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_Text-Chem_T5-standard_binary_classification.err        # Файл для вывода ошибок
-#SBATCH --output=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_Text-Chem_T5-standard_binary_classification.txt       # Файл для вывода результатов
+#SBATCH --job-name=chem_t5     # Название задачи
+#SBATCH --error=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_Text-Chem_T5-augm_regression.err        # Файл для вывода ошибок
+#SBATCH --output=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_Text-Chem_T5-augm_regression.txt       # Файл для вывода результатов
 #SBATCH --time=23:45:59                      # Максимальное время выполнения
 #SBATCH --cpus-per-task=2                   # Количество CPU на одну задачу
 #SBATCH --gpus=1                   # Требуемое количество GPU
@@ -9,12 +9,13 @@
 
 set TOKENIZERS_PARALLELISM=false
 
-MODEL_VERBOSE=Text-Chem_T5-standard
-MODEL=/home/etutubalina/graph_entity_linking/huggingface_models/GT4SD/multitask-text-and-chemistry-t5-base-standard
+MODEL_VERBOSE=Text-Chem_T5-augm
+MODEL=/home/etutubalina/graph_entity_linking/huggingface_models/GT4SD/multitask-text-and-chemistry-t5-base-augm
+
 
 BASE_CONFIGS_DIR=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/configs
 BASE_DATA_DIR=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/datasets/moleculenet-benchmark
-TASK_NAMES=("binary_classification")
+TASK_NAMES=("regression")
 BASE_EVAL_DIR=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/finetune_eval_results/${MODEL_VERBOSE}
 
 for task_name in ${TASK_NAMES[@]};
