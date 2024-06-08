@@ -219,9 +219,9 @@ def main(args):
         train_df[target_col] = train_df[target_col].astype(str)
         val_df[target_col] = val_df[target_col].astype(str)
         test_df[target_col] = test_df[target_col].astype(str)
-    train_df["prompt"] = train_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
-    val_df["prompt"] = val_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
-    test_df["prompt"] = test_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
+    # train_df["prompt"] = train_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
+    # val_df["prompt"] = val_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
+    # test_df["prompt"] = test_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
     class_names = None
     if task_name == "multi_label_classification":
         target_col = "y_verbose"
@@ -239,6 +239,9 @@ def main(args):
         test_df["y_verbose"] = test_df.apply(lambda row: create_verbose_multilabel(row, class_names), axis=1)
         print("train_df[y_verbose]", train_df["y_verbose"].values[:3])
         print("test_df[y_verbose]", test_df["y_verbose"].values[:3])
+    train_df["prompt"] = train_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
+    val_df["prompt"] = val_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
+    test_df["prompt"] = test_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
 
     print("prompts", train_df["prompt"].values[:3])
 
