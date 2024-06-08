@@ -322,7 +322,7 @@ def main(args):
         add_test_metrics = trainer.evaluate(additional_test_inputs)
 
         additional_test_prediction = trainer.predict(additional_test_inputs)
-        additional_test_prediction = tokenizer.batch_decode(additional_test_prediction, skip_special_tokens=True)
+        # additional_test_prediction = tokenizer.batch_decode(additional_test_prediction, skip_special_tokens=True)
 
         logging.info(f"Dataset: {input_data_dir}, augmentation: {additional_test_set_name}")
         for k, v in add_test_metrics.items():
