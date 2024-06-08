@@ -1,54 +1,20 @@
 import argparse
 import logging
 import os
+from typing import List, Dict, Optional
+
 import numpy as np
 import pandas as pd
-import torch
 from sklearn.metrics import accuracy_score, mean_absolute_error, mean_squared_error
 from torch.utils.data import Dataset
-from transformers import AutoModelForSequenceClassification, TrainingArguments, Trainer, T5ForConditionalGeneration, \
-    DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer, AutoModelForSeq2SeqLM
 from transformers import AutoTokenizer
+from transformers import T5ForConditionalGeneration, \
+    Seq2SeqTrainingArguments, Seq2SeqTrainer
 
 from molretrieval.utils.io import load_config_dict
 
 
 # from datasets import load_metric
-
-
-def compute_metrics_regression(eval_pred):
-    predictions, true_y = eval_pred
-    predictions = predictions.squeeze(-1)
-    rmse = mean_squared_error(true_y, predictions, squared=False)
-    mae = mean_absolute_error(true_y, predictions)
-
-    return {"rmse": float(rmse),
-            "mae": float(mae)}
-
-
-def compute_metrics_binary_classification(eval_pred):
-    predictions, true_y = eval_pred
-    predictions = np.argmax(predictions, axis=1)
-    true_y = np.argmax(true_y, axis=1)
-
-    return {"accuracy": float(
-        accuracy_score(true_y, predictions, normalize=True, sample_weight=None))}
-
-
-# def compute_metrics_multilabel_classification(eval_pred):
-#     predictions, true_y = eval_pred
-#     predictions = predictions > 0.5
-#     predictions = predictions.astype(np.int32)
-#
-#     return {"accuracy": float(
-#         accuracy_score(true_y.reshape(-1), predictions.reshape(-1), normalize=True, sample_weight=None))}
-#
-
-TASK_NAME2COMPUTE_METRIC_FN = {
-    "regression": compute_metrics_regression,
-    "single_label_classification": compute_metrics_binary_classification,
-    # "multi_label_classification": compute_metrics_multilabel_classification
-}
 
 
 def postprocess_text(preds, labels):
@@ -57,18 +23,13 @@ def postprocess_text(preds, labels):
     return preds, labels
 
 
-def compute_metrics_wrapper_binary(tokenizer, task):
-    # id_0 = tokenizer.tokenize("0", add_special_tokens=False)[0]
-    # id_1 = tokenizer.tokenize("1", add_special_tokens=False)[0]
-    # print("id_0", id_0)
-    # print("id_1", id_1)
-    # assert isinstance(id_0, int)
-    # assert isinstance(id_1, int)
+def compute_metrics_wrapper_binary(tokenizer, task, class_names):
+    class_names = [x.lower() for x in class_names]
 
     def compute_metrics(eval_preds):
         preds, labels = eval_preds
-        print("preds", preds[:10])
-        print("labels", labels[:10])
+        print("preds", preds[:3])
+        print("labels", labels[:3])
         if isinstance(preds, tuple):
             preds = preds[0]
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
@@ -78,10 +39,14 @@ def compute_metrics_wrapper_binary(tokenizer, task):
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
         true_labels_list = []
         pred_labels_list = []
+        class_name2id: Dict[str, int] = {}
+        if task == "multi_label_classification":
+            class_name2id: Dict[str, int] = {cl: i for i, cl in enumerate(class_names)}
+            num_classes = len(class_names)
 
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
-        print("decoded_preds", decoded_preds[:10])
-        print("decoded_labels", decoded_labels[:10])
+        print("decoded_preds", decoded_preds[:3])
+        print("decoded_labels", decoded_labels[:3])
         for true_label, pred_label in zip(decoded_labels, decoded_preds):
             if task == "single_label_classification":
                 true_labels_list.append(int(true_label[0].strip()))
@@ -97,14 +62,39 @@ def compute_metrics_wrapper_binary(tokenizer, task):
                     pred_label = 0.
                 true_labels_list.append(true_label)
                 pred_labels_list.append(pred_label)
-        print("true_labels_list", true_labels_list[:10])
-        print("pred_labels_list", pred_labels_list[:10])
+            elif task == "multi_label_classification":
+                assert len(true_label) == 1
+                assert len(pred_label) == 1
+                true_positive_class_names = set([s.lower() for s in true_label[0].split(',')])
+                pred_positive_class_names = set([s.lower() for s in pred_label[0].split(',')])
+                print("true_positive_class_names", true_positive_class_names[:3])
+                print("predicted_positive_class_names", pred_positive_class_names[:3])
+                true_binary_labels = [0, ] * num_classes
+                pred_binary_labels = [0, ] * num_classes
+                for cn in true_positive_class_names:
+                    class_id = class_name2id.get(cn)
+                    if class_id is not None:
+                        true_binary_labels[class_id] = 1
+                for cn in pred_positive_class_names:
+                    class_id = class_name2id.get(cn)
+                    if class_id is not None:
+                        pred_binary_labels[class_id] = 1
+                true_labels_list.extend(true_binary_labels)
+                pred_labels_list.extend(pred_binary_labels)
+            else:
+                ValueError(f"Unsupported task name: {task}")
+        print("true_labels_list", true_labels_list[:3])
+        print("pred_labels_list", pred_labels_list[:3])
         result = {}
         if task == "regression":
             result["rmse"] = float(mean_squared_error(true_labels_list, pred_labels_list, squared=False))
             result["mae"] = float(mean_absolute_error(true_labels_list, pred_labels_list))
         elif task == "single_label_classification":
             result["accuracy"] = float(accuracy_score(true_labels_list, pred_labels_list))
+        elif task == "multi_label_classification":
+            result["accuracy"] = float(accuracy_score(true_labels_list, pred_labels_list))
+            result["num_true_ones"] = sum(true_labels_list)
+            result["num_pred_ones"] = sum(pred_labels_list)
 
         prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
         result["gen_len"] = np.mean(prediction_lens)
@@ -114,16 +104,29 @@ def compute_metrics_wrapper_binary(tokenizer, task):
     return compute_metrics
 
 
+def create_verbose_multilabel(row, class_names):
+    one_hot_labels = [row[x] for x in class_names]
+    assert len(set(one_hot_labels)) in (1, 2)
+    labels_verbose_list: List[str] = []
+    for one_or_zero, cn in zip(one_hot_labels, class_names):
+        cn = cn.replace(',', ' ')
+        if one_or_zero == 1:
+            labels_verbose_list.append(cn)
+    s = ', '.join(labels_verbose_list)
+
+    return s
+
+
 class T5Dataset(Dataset):
-    def __init__(self, tokenizer, prompts, labels, max_length):
+    def __init__(self, tokenizer, prompts, labels, src_max_length: int, tgt_max_length: int):
         super(T5Dataset, self).__init__()
         self.tokenizer = tokenizer
         prompts = [str(x) for x in prompts]
         labels = [str(x) for x in labels]
         self.prompts = prompts
         self.labels = labels
-        self.src_max_length = max_length
-        self.tgt_max_length = 32
+        self.src_max_length = src_max_length
+        self.tgt_max_length = tgt_max_length
 
     def __len__(self):
         return len(self.prompts)
@@ -201,11 +204,9 @@ def main(args):
     target_col = config_dict["target_col"]
     metric_name = config_dict["metric_name"]
     task_name = config_dict["task"]
-    problem_type = task_name
-    # problem_type = problem_type if problem_type != "single_label_classification" else None
-    # num_classes = int(config_dict["num_classes"])
-    # classes_or_smiles_first = config_dict.get("classes_or_smiles_first")
-    # compute_metric_fn = TASK_NAME2COMPUTE_METRIC_FN[task_name]
+    target_max_length = int(config_dict["target_max_length"])
+    num_classes = int(config_dict["num_classes"])
+    classes_or_smiles_first = config_dict.get("classes_or_smiles_first")
     greater_is_better = False if task_name == "regression" else True
     logging.info(f"greater_is_better: {greater_is_better}")
     prompt = config_dict["prompt"]
@@ -213,48 +214,41 @@ def main(args):
         train_df[target_col] = train_df[target_col].fillna(0)
         val_df[target_col] = val_df[target_col].fillna(0)
         test_df[target_col] = test_df[target_col].fillna(0)
-
-    train_df[target_col] = train_df[target_col].astype(str)
-    val_df[target_col] = val_df[target_col].astype(str)
-    test_df[target_col] = test_df[target_col].astype(str)
+    if task_name != "multi_label_classification":
+        train_df[target_col] = train_df[target_col].astype(str)
+        val_df[target_col] = val_df[target_col].astype(str)
+        test_df[target_col] = test_df[target_col].astype(str)
     train_df["prompt"] = train_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
     val_df["prompt"] = val_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
     test_df["prompt"] = test_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
-    print("prompts", train_df["prompt"].values[:10])
-    # model = T5ForConditionalGeneration.from_pretrained(base_model_name)
+    class_names = None
+    if task_name == "multi_label_classification":
+        target_col = "y_verbose"
+        column_names = train_df.columns
+        if classes_or_smiles_first == "classes":
+            class_names = column_names[:num_classes]
+        elif classes_or_smiles_first == "smiles":
+            class_names = column_names[1:]
+            assert len(class_names) == num_classes
+        train_df["y_verbose"] = train_df.apply(lambda row: create_verbose_multilabel(row, class_names), axis=1)
+        val_df["y_verbose"] = val_df.apply(lambda row: create_verbose_multilabel(row, class_names), axis=1)
+        test_df["y_verbose"] = test_df.apply(lambda row: create_verbose_multilabel(row, class_names), axis=1)
+        print("train_df[y_verbose]", train_df["y_verbose"].values[:3])
+        print("test_df[y_verbose]", test_df["y_verbose"].values[:3])
+
+    print("prompts", train_df["prompt"].values[:3])
+
     model = T5ForConditionalGeneration.from_pretrained(base_model_name)
     train_inputs = T5Dataset(tokenizer=tokenizer, prompts=train_df["prompt"].values,
-                             labels=train_df[target_col].values, max_length=max_length)
+                             labels=train_df[target_col].values, src_max_length=max_length,
+                             tgt_max_length=target_max_length)
     val_inputs = T5Dataset(tokenizer=tokenizer, prompts=val_df["prompt"].values,
-                           labels=val_df[target_col].values, max_length=max_length)
+                           labels=val_df[target_col].values, src_max_length=max_length,
+                           tgt_max_length=target_max_length)
     test_inputs = T5Dataset(tokenizer=tokenizer, prompts=test_df["prompt"].values,
-                            labels=test_df[target_col].values, max_length=max_length)
-    # train_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=train_df["prompt"].values,
-    #                                         labels=train_df[target_col].values, max_length=max_length)
-    # val_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=val_df["prompt"].values,
-    #                                       labels=val_df[target_col].values, max_length=max_length)
-    # test_inputs = create_tokenized_samples(tokenizer=tokenizer, prompts=test_df["prompt"].values,
-    #                                        labels=test_df[target_col].values, max_length=max_length)
+                            labels=test_df[target_col].values, src_max_length=max_length,
+                            tgt_max_length=target_max_length)
 
-    # train_args = TrainingArguments(
-    #     output_finetuned_dir,
-    #     evaluation_strategy="epoch",
-    #     save_strategy="epoch",
-    #     learning_rate=learning_rate,
-    #     per_device_train_batch_size=batch_size,
-    #     per_device_eval_batch_size=batch_size,
-    #     num_train_epochs=num_epochs,
-    #     weight_decay=0.01,
-    #     warmup_ratio=warmup_ratio,
-    #     warmup_steps=warmup_steps,
-    #     greater_is_better=greater_is_better,
-    #     load_best_model_at_end=True,
-    #     metric_for_best_model=metric_name,
-    #     logging_steps=0.01,
-    #     save_total_limit=2,
-    #     seed=42,
-    #     push_to_hub=False,
-    # )
     training_args = Seq2SeqTrainingArguments(
         output_dir=output_finetuned_dir,
         evaluation_strategy="epoch",
@@ -278,7 +272,7 @@ def main(args):
         eval_dataset=val_inputs,
         tokenizer=tokenizer,
         # data_collator=data_collator,
-        compute_metrics=compute_metrics_wrapper_binary(tokenizer, task_name),
+        compute_metrics=compute_metrics_wrapper_binary(tokenizer, task_name, class_names=class_names),
     )
 
     logging.info("Training...")
@@ -308,10 +302,15 @@ def main(args):
 
         additional_test_df["prompt"] = additional_test_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>",
                                                                                                       sm))
+        if task_name == "multi_label_classification":
+            additional_test_df["y_verbose"] = additional_test_df.apply(lambda row:
+                                                                       create_verbose_multilabel(row, class_names),
+                                                                       axis=1)
+
         additional_test_inputs = T5Dataset(tokenizer=tokenizer,
                                            prompts=additional_test_df["prompt"].values,
                                            labels=additional_test_df[target_col].values,
-                                           max_length=max_length)
+                                           src_max_length=max_length, tgt_max_length=target_max_length)
         add_test_metrics = trainer.evaluate(additional_test_inputs)
 
         additional_test_prediction = trainer.predict(additional_test_inputs)

@@ -4,3 +4,4 @@ metric_name : accuracy
 task : single_label_classification
 num_classes : 2
 prompt : Can <SMILES> penetrate the BBB?
+target_max_length : 8
