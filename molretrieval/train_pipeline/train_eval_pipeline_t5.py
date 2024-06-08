@@ -24,7 +24,7 @@ def postprocess_text(preds, labels):
 
 
 def compute_metrics_wrapper_binary(tokenizer, task, class_names):
-    class_names = [x.lower() for x in class_names]
+    class_names = [x.lower().strip() for x in class_names]
 
     def compute_metrics(eval_preds):
         preds, labels = eval_preds
@@ -63,10 +63,11 @@ def compute_metrics_wrapper_binary(tokenizer, task, class_names):
                 true_labels_list.append(true_label)
                 pred_labels_list.append(pred_label)
             elif task == "multi_label_classification":
+
                 assert len(true_label) == 1
-                assert len(pred_label) == 1
-                true_positive_class_names = set([s.lower() for s in true_label[0].split(',')])
-                pred_positive_class_names = set([s.lower() for s in pred_label[0].split(',')])
+                # assert len(pred_label) == 1
+                true_positive_class_names = set([s.lower().strip() for s in true_label[0].split(',')])
+                pred_positive_class_names = set([s.lower().strip() for s in pred_label.split(',')])
                 print("true_positive_class_names", true_positive_class_names[:3])
                 print("predicted_positive_class_names", pred_positive_class_names[:3])
                 true_binary_labels = [0, ] * num_classes
