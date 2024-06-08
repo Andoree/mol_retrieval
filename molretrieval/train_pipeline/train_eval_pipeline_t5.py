@@ -29,8 +29,8 @@ def compute_metrics_wrapper_binary(tokenizer, task, class_names):
 
     def compute_metrics(eval_preds):
         preds, labels = eval_preds
-        print("preds", preds[:5])
-        print("labels", labels[:5])
+        # print("preds", preds[:5])
+        # print("labels", labels[:5])
         if isinstance(preds, tuple):
             preds = preds[0]
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
