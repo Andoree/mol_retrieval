@@ -69,8 +69,8 @@ def compute_metrics_wrapper_binary(tokenizer, task, class_names):
                 # assert len(pred_label) == 1
                 true_positive_class_names = set([s.lower().strip() for s in true_label[0].split(',')])
                 pred_positive_class_names = set([s.lower().strip() for s in pred_label.split(',')])
-                print("true_positive_class_names", true_positive_class_names[:3])
-                print("predicted_positive_class_names", pred_positive_class_names[:3])
+                print("true_positive_class_names", tuple(true_positive_class_names)[:3])
+                print("predicted_positive_class_names", tuple(pred_positive_class_names)[:3])
                 true_binary_labels = [0, ] * num_classes
                 pred_binary_labels = [0, ] * num_classes
                 for cn in true_positive_class_names:
