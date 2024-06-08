@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=chem_t5     # Название задачи
-#SBATCH --error=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_Text-Chem_T5-standard.err        # Файл для вывода ошибок
-#SBATCH --output=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_Text-Chem_T5-standard.txt       # Файл для вывода результатов
+#SBATCH --error=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_Text-Chem_T5-standard_multilabel.err        # Файл для вывода ошибок
+#SBATCH --output=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_Text-Chem_T5-standard_multilabel.txt       # Файл для вывода результатов
 #SBATCH --time=23:45:59                      # Максимальное время выполнения
 #SBATCH --cpus-per-task=2                   # Количество CPU на одну задачу
 #SBATCH --gpus=1                   # Требуемое количество GPU
