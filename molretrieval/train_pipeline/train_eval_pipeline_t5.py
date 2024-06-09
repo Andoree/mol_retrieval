@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, mean_absolute_error, mean_squared_error
 from torch.utils.data import Dataset
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, BartForConditionalGeneration
 from transformers import T5ForConditionalGeneration, \
     Seq2SeqTrainingArguments, Seq2SeqTrainer
 
@@ -187,6 +187,7 @@ def main(args):
     warmup_ratio = args.warmup_ratio
     warmup_steps = args.warmup_steps
     base_model_name = args.base_model_name
+    bart_flag = args.bart
     output_dir = args.output_dir
     output_finetuned_dir = os.path.join(output_dir, "finetuned_models/")
     if not os.path.exists(output_finetuned_dir):
@@ -196,9 +197,9 @@ def main(args):
     input_train_path = os.path.join(input_data_dir, "train.csv")
     input_valid_path = os.path.join(input_data_dir, "valid.csv")
     input_test_path = os.path.join(input_data_dir, "test.csv")
-    train_df = pd.read_csv(input_train_path).fillna(0)
-    val_df = pd.read_csv(input_valid_path).fillna(0)
-    test_df = pd.read_csv(input_test_path).fillna(0)
+    train_df = pd.read_csv(input_train_path)  # .fillna(0)
+    val_df = pd.read_csv(input_valid_path)  # .fillna(0)
+    test_df = pd.read_csv(input_test_path)  # .fillna(0)
 
     logging.info(f"Loaded data: Train - {train_df.shape}, Val - {val_df.shape}, Test - {test_df.shape}")
     config_dict = load_config_dict(config_path=input_config_path)
@@ -212,6 +213,13 @@ def main(args):
     greater_is_better = False if task_name == "regression" else True
     logging.info(f"greater_is_better: {greater_is_better}")
     prompt = config_dict["prompt"]
+    train_df[smiles_col] = train_df[smiles_col].fillna('')
+    val_df[smiles_col] = val_df[smiles_col].fillna('')
+    test_df[smiles_col] = test_df[smiles_col].fillna('')
+    train_df = train_df.fillna(0)
+    val_df = val_df.fillna(0)
+    test_df = test_df.fillna(0)
+
     if target_col is not None and target_col.strip() != "None":
         train_df[target_col] = train_df[target_col].fillna(0)
         val_df[target_col] = val_df[target_col].fillna(0)
@@ -245,8 +253,11 @@ def main(args):
     test_df["prompt"] = test_df[smiles_col].apply(lambda sm: prompt.replace("<SMILES>", sm))
 
     print("prompts", train_df["prompt"].values[:3])
-
-    model = T5ForConditionalGeneration.from_pretrained(base_model_name)
+    if bart_flag:
+        model = BartForConditionalGeneration.from_pretrained(base_model_name)
+        max_length, target_max_length = 128, min(target_max_length, 128)
+    else:
+        model = T5ForConditionalGeneration.from_pretrained(base_model_name)
     train_inputs = T5Dataset(tokenizer=tokenizer, prompts=train_df["prompt"].values,
                              labels=train_df[target_col].values, src_max_length=max_length,
                              tgt_max_length=target_max_length)
@@ -302,7 +313,10 @@ def main(args):
 
     for additional_test_set_name in additional_test_sets:
         input_additional_test_path = os.path.join(input_data_dir, f"{additional_test_set_name}.csv")
-        additional_test_df = pd.read_csv(input_additional_test_path).fillna(0)
+        additional_test_df = pd.read_csv(input_additional_test_path)  # .fillna(0)
+        additional_test_df[smiles_col] = additional_test_df[smiles_col].fillna('')
+        additional_test_df = additional_test_df.fillna(0)
+
         if task_name == "multi_label_classification":
             additional_test_df["y_verbose"] = additional_test_df.apply(lambda row:
                                                                        create_verbose_multilabel(row, class_names),
@@ -349,6 +363,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, required=False, default=16)
     parser.add_argument('--max_length', type=int, required=False, default=512)
     parser.add_argument('--num_epochs', type=int, required=False, default=50)
+    parser.add_argument('--bart', action="store_true")
     parser.add_argument('--warmup_ratio', type=float, required=False, default=0.0)
     parser.add_argument('--warmup_steps', type=int, required=False, default=0)
     parser.add_argument('--learning_rate', type=float, required=False, default=1e-5)
