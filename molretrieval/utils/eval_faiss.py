@@ -97,12 +97,17 @@ def save_last_hidden_state_bert(data, model, tokenizer, path_to_res):
     return t5_condgen_result
 
 
-def save_last_hidden_state_bart(data, model, tokenizer, path_to_res):
+def save_last_hidden_state_bart(data, model, tokenizer, path_to_res, max_length: int, smiles_col: str):
+    batch_size = 1
     with torch.no_grad():
         t5_condgen_result = []
-        for batch in tqdm(data):
-            inputs = tokenizer(batch, return_tensors="pt", return_token_type_ids=False, padding=False, truncation=True,
-                               max_length=128)
+
+        for i in tqdm(range(0, len(data[smiles_col]), batch_size)):
+            # encoded_dict_t5condgen = tokenizer(list(data[smiles_col][i:i + batch_size]),
+            #                                    return_tensors="pt", padding=False, max_length=max_length,
+            #                                    truncation=True)
+            inputs = tokenizer(list(data[smiles_col][i:i + batch_size]), return_tensors="pt", return_token_type_ids=False, padding=False, truncation=True,
+                               max_length=max_length)
             output = model.encoder(**inputs).last_hidden_state
             t5_condgen_result.append(torch.mean(output, dim=1))
 

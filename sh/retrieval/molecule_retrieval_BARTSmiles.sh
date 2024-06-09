@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=chem_enc_finetune          # Название задачи
+#SBATCH --job-name=chem_retrieval          # Название задачи
 #SBATCH --error=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/retrieval/molecule_retrieval_BARTSmiles.err        # Файл для вывода ошибок
 #SBATCH --output=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/retrieval/molecule_retrieval_BARTSmiles.txt       # Файл для вывода результатов
 #SBATCH --time=23:45:59                      # Максимальное время выполнения
@@ -37,6 +37,7 @@ do
     --input_data_dir ${DATASET_DIR} \
     --augmentation_names "test_cycle_renumering" "test_explicit_hs" "test_kekulize_smiles" "test_rdkit_canonical" \
     --base_model_name ${MODEL} \
+    --bart \
     --max_length 512 \
     --output_dir ${OUTPUT_EVAL_DIR}
 
