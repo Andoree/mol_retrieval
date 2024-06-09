@@ -4,5 +4,5 @@ metric_name : accuracy
 task : multi_label_classification
 num_classes : 12
 classes_or_smiles_first : classes
-prompt : Given molecule with SMILES <SMILES>, predict its toxicity measurements.
+prompt : Given molecule <SMILES>, predict its toxicity measurements.
 target_max_length : 128

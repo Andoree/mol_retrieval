@@ -4,5 +4,5 @@ metric_name : accuracy
 task : multi_label_classification
 num_classes : 27
 classes_or_smiles_first : smiles
-prompt : Given molecule with SMILES <SMILES>, predict its toxicity measurements.
+prompt : Given drug compound <SMILES>, predict the organ classes for which it causes adverse reactions.
 target_max_length : 256

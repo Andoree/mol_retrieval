@@ -3,5 +3,5 @@ target_col : measured log solubility in mols per litre
 metric_name : rmse
 task : regression
 num_classes : 1
-prompt : Given molecule with SMILES <SMILES>, predict its water solubility.
+prompt : What is water solubility of <SMILES>?
 target_max_length : 16
