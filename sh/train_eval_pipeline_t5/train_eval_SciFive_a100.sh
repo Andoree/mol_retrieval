@@ -1,16 +1,16 @@
 #!/bin/bash
 #SBATCH --job-name=chem_t5          # Название задачи
-#SBATCH --error=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_Text-Chem_T5-standard.err        # Файл для вывода ошибок
-#SBATCH --output=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_Text-Chem_T5-standard.txt       # Файл для вывода результатов
+#SBATCH --error=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_SciFive_a100.err        # Файл для вывода ошибок
+#SBATCH --output=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/logs/train_eval_pipeline/train_eval_SciFive_a100.txt       # Файл для вывода результатов
 #SBATCH --time=23:45:59                      # Максимальное время выполнения
-#SBATCH --cpus-per-task=2                   # Количество CPU на одну задачу
+#SBATCH --cpus-per-task=4                   # Количество CPU на одну задачу
 #SBATCH --gpus=1                   # Требуемое количество GPU
-#SBATCH --constraint=type_c|type_b|type_a
+#SBATCH --constraint=type_e
 
 set TOKENIZERS_PARALLELISM=false
 
-MODEL_VERBOSE=Text-Chem_T5-standard
-MODEL=/home/etutubalina/graph_entity_linking/huggingface_models/GT4SD/multitask-text-and-chemistry-t5-base-standard
+MODEL_VERBOSE=SciFive
+MODEL=/home/etutubalina/graph_entity_linking/huggingface_models/razent/SciFive-base-Pubmed
 
 BASE_CONFIGS_DIR=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/configs
 BASE_DATA_DIR=/home/etutubalina/graph_entity_linking/text_kb_pretraining/mol_retrieval/datasets/moleculenet-benchmark
@@ -40,9 +40,9 @@ do
     --base_model_name ${MODEL} \
     --batch_size 32 \
     --max_length 256 \
-    --num_epochs 50 \
+    --num_epochs 25 \
     --warmup_ratio 0.1 \
-    --learning_rate 6e-4 \
+    --learning_rate 1e-3 \
     --output_dir ${OUTPUT_EVAL_DIR}
 
   done
