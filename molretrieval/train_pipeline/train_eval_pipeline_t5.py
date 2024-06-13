@@ -254,6 +254,7 @@ def main(args):
 
     print("prompts", train_df["prompt"].values[:3])
     if bart_flag:
+        tokenizer.pad_token = tokenizer.eos_token
         model = BartForConditionalGeneration.from_pretrained(base_model_name)
         max_length, target_max_length = 128, min(target_max_length, 128)
     else:
